@@ -32,7 +32,7 @@ _main_menu:
     call _sleep
     call _clear_screen
 
-    jmp _main_menu    
+    jmp _get_user_input    
 
 ;
 ;exit graphical mode
@@ -166,13 +166,33 @@ _no_blink:
 
     ret
 
+_get_user_input:
+	mov AH, 1h		;Set ah to 1
+	int 16h		;Check keystroke interrupt
+	jz _main_menu	;Return if no keystroke
+	mov AH, 0h		;Set ah to 1
+	int 16h		;Get keystroke interrupt
+	cmp ah, 0x48	;Jump if up arrow pressed
+	je _move_up
+	cmp ah, 0x50	;Jump if down arrow pressed
+	je _move_down
+	jmp _main_menu
+
+_move_up:
+    dec byte [lvlSelect]
+    jmp _main_menu
+
+_move_down:
+    inc byte [lvlSelect]
+    jmp _main_menu
+
 section .data
 
-    title dw '--- TETRIS 86 ---$'
-    lvl1 dw 'LEVEL 1$'
-    lvl2 dw 'LEVEL 2$'
-    lvl3 dw 'LEVEL 3$'
-    exitGame dd 'EXIT GAME$'
+    title db '--- TETRIS 86 ---$'
+    lvl1 db 'LEVEL 1$'
+    lvl2 db 'LEVEL 2$'
+    lvl3 db 'LEVEL 3$'
+    exitGame db 'EXIT GAME$'
 
     lvlSelect db 4
     blink db 0

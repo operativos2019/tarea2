@@ -142,18 +142,38 @@ _print_exitGame:
 
     ret    
 
+_get_user_input:
+	mov AH, 1h		;Set ah to 1
+	int 16h		;Check keystroke interrupt
+	jz _main_menu	;Return if no keystroke
+	mov AH, 0h		;Set ah to 0
+	int 16h		;Get keystroke interrupt
+	cmp ah, 0x48	;Jump if up arrow pressed
+	je _move_up
+	cmp ah, 0x50	;Jump if down arrow pressed
+	je _move_down
+	jmp _main_menu
+
+_move_up:
+    cmp byte [lvlSelect], 1
+    je _main_menu
+
+    dec byte [lvlSelect]
+    jmp _main_menu
+
+_move_down:   
+    inc byte [lvlSelect]
+    jmp _main_menu
 
 _display: 
-    mov byte AH, [lvlSelect]
-    cmp AH, CL
+    cmp byte [lvlSelect], CL
     je _blink ; if  current selected level is 1 verify blink
     call _print_string ;print lvl 1 on screen
 
     ret
 
 _blink:
-    mov byte AH, [blink]
-    cmp AH, 0         
+    cmp byte [blink], 0         
     je _no_blink ;if blink == 0 jmp _lvl1noprint
 
     mov byte [blink], 0 ;turn blink to 0
@@ -166,26 +186,6 @@ _no_blink:
 
     ret
 
-_get_user_input:
-	mov AH, 1h		;Set ah to 1
-	int 16h		;Check keystroke interrupt
-	jz _main_menu	;Return if no keystroke
-	mov AH, 0h		;Set ah to 1
-	int 16h		;Get keystroke interrupt
-	cmp ah, 0x48	;Jump if up arrow pressed
-	je _move_up
-	cmp ah, 0x50	;Jump if down arrow pressed
-	je _move_down
-	jmp _main_menu
-
-_move_up:
-    dec byte [lvlSelect]
-    jmp _main_menu
-
-_move_down:
-    inc byte [lvlSelect]
-    jmp _main_menu
-
 section .data
 
     title db '--- TETRIS 86 ---$'
@@ -194,5 +194,5 @@ section .data
     lvl3 db 'LEVEL 3$'
     exitGame db 'EXIT GAME$'
 
-    lvlSelect db 4
+    lvlSelect db 1
     blink db 0

@@ -1,13 +1,9 @@
 [BITS 16]
 org 100h
 
-jmp _main
+section .text
 
-_main: 
-    call _enter13h
-    call _main_menu
-    ;call _exit13h
-    jmp _end
+jmp start
 
 ;    
 ;enter graphical mode
@@ -18,21 +14,9 @@ _enter13h:
 
     ret
 
-;
-;main menu display loop 
-;
-_main_menu: 
-
-    call _print_tittle
-    call _print_lvl1
-    call _print_lvl2
-    call _print_lvl3
-    call _print_exitGame
-    mov CX, 05h
-    call _sleep
-    call _clear_screen
-
-    jmp _get_user_input    
+start: 
+    call _enter13h
+    jmp _main_menu
 
 ;
 ;exit graphical mode
@@ -42,12 +26,16 @@ _exit13h:
     int 10h
 
     ret
+
 ;
 ;exit execution, return to DOS
 ;
 _end: 
+    call _exit13h
     int 21h         	; DOS interruption
     ret
+
+
 
 ;
 ; Print a string at the specified location
@@ -101,70 +89,6 @@ _print_tittle:
     call _print_string
     ret
 
-;
-;Method used to print lvl 1 on main menu, 
-; verifies if lvl 1 is selected, if it is 
-; it blinks the text
-;
-_print_lvl1:
-    mov DH, 9      ;set row
-    mov DL, 17     ;set column
-    mov BX, lvl1   ;set text to print
-    mov CL, 1      ;option number
-    call _display
-
-    ret
-
-_print_lvl2:
-    mov DH, 12     ;set row
-    mov DL, 17     ;set column
-    mov BX, lvl2   ;set text to print
-    mov CL, 2      ;option number
-    call _display
-
-    ret
-
-_print_lvl3:
-    mov DH, 15     ;set row
-    mov DL, 17     ;set column
-    mov BX, lvl3   ;set text to print
-    mov CL, 3      ;option number
-    call _display
-
-    ret
-
-_print_exitGame:
-    mov DH, 19     ;set row
-    mov DL, 16     ;set column
-    mov BX, exitGame   ;set text to print
-    mov CL, 4      ;option number
-    call _display
-
-    ret    
-
-_get_user_input:
-	mov AH, 1h		;Set ah to 1
-	int 16h		;Check keystroke interrupt
-	jz _main_menu	;Return if no keystroke
-	mov AH, 0h		;Set ah to 0
-	int 16h		;Get keystroke interrupt
-	cmp ah, 0x48	;Jump if up arrow pressed
-	je _move_up
-	cmp ah, 0x50	;Jump if down arrow pressed
-	je _move_down
-	jmp _main_menu
-
-_move_up:
-    cmp byte [lvlSelect], 1
-    je _main_menu
-
-    dec byte [lvlSelect]
-    jmp _main_menu
-
-_move_down:   
-    inc byte [lvlSelect]
-    jmp _main_menu
-
 _display: 
     cmp byte [lvlSelect], CL
     je _blink ; if  current selected level is 1 verify blink
@@ -185,6 +109,129 @@ _no_blink:
     mov byte [blink], 1 ; turn blink to 1
 
     ret
+
+
+;
+;Method used to print lvl 1 on main menu, 
+; verifies if lvl 1 is selected, if it is 
+; it blinks the text
+;
+_print_lvl1:
+    mov DH, 9      ;set row
+    mov DL, 17     ;set column
+    mov BX, lvl1   ;set text to print
+    mov CL, 1      ;option number
+    call _display
+
+    ret
+
+;
+;Method used to print lvl 2 on main menu, 
+; verifies if lvl 2 is selected, if it is 
+; it blinks the text
+;
+_print_lvl2:
+    mov DH, 12     ;set row
+    mov DL, 17     ;set column
+    mov BX, lvl2   ;set text to print
+    mov CL, 2      ;option number
+    call _display
+
+    ret
+
+;
+;Method used to print lvl 3 on main menu, 
+; verifies if lvl 3 is selected, if it is 
+; it blinks the text
+;
+_print_lvl3:
+    mov DH, 15     ;set row
+    mov DL, 17     ;set column
+    mov BX, lvl3   ;set text to print
+    mov CL, 3      ;option number
+    call _display
+
+    ret
+
+;
+;Method used to print exit game on main menu, 
+; verifies if exit game is selected, if it is 
+; it blinks the text
+;
+_print_exitGame:
+    mov DH, 19     ;set row
+    mov DL, 16     ;set column
+    mov BX, exitGame   ;set text to print
+    mov CL, 4      ;option number
+    call _display
+
+    ret    
+
+select_option: 
+    cmp byte [lvlSelect], 4
+    je _end 
+
+    jmp _main_menu
+    ;call _exit13h
+    ;jmp _end  
+    ;jmp _main_menu  
+    ;inc byte [lvlSelect]
+    ;
+
+move_up:
+    cmp byte [lvlSelect], 1
+    je _main_menu
+
+    dec byte [lvlSelect]
+    jmp _main_menu
+
+move_down:   
+    cmp byte [lvlSelect], 4
+    je _main_menu
+
+    inc byte [lvlSelect]
+    jmp _main_menu
+
+;
+; Method used to verify the keys pressed
+;
+;_get_user_input:
+
+
+;
+;main menu display loop 
+;
+_main_menu: 
+    call _print_tittle
+    call _print_lvl1
+    call _print_lvl2
+    call _print_lvl3
+    call _print_exitGame
+    mov CX, 05h
+    call _sleep
+    call _clear_screen
+
+   	mov AH, 1h		;Set ah to 1
+	int 16h		;Check keystroke interrupt
+	jz _main_menu	;Return if no keystroke
+
+	mov AH, 0h		;Set ah to 0
+	int 16h		;Get keystroke interrupt
+    
+    ;cmp AH, 01h    
+    ;je escape_key
+
+    cmp AH, 0x1C    
+    je select_option
+	
+    cmp AH, 0x48	;Jump if up arrow pressed
+	je move_up
+	
+    cmp AH, 0x50	;Jump if down arrow pressed
+	je move_down
+
+    jmp _main_menu
+
 
 section .data
 

@@ -26,44 +26,56 @@ finish:
 ;
 _main_menu: 
 
-    call _print_tittle   
-    call _print_lvl1
-    call _print_lvl2
-    call _print_lvl3
-    call _print_exitGame
+    call _print_menu_tittle   
+    call _print_menu_lvl1
+    call _print_menu_lvl2
+    call _print_menu_lvl3
+    call _print_menu_exitGame
 
     mov BX, word [mainMenuDelay]
     call _sleep
 
  	mov AH, 1h		;Set ah to 1
-	int 16h		;Check keystroke interrupt
+	int 16h		    ;Check keystroke interrupt
 	jz  _main_menu	;Return if no keystroke
 
 	mov AH, 0h		;Set ah to 0
-	int 16h		;Get keystroke interrupt
+	int 16h		    ;Get keystroke interrupt
 
     cmp AH, 0x01    
-    je _menu_escape
+    je _menu_escape ;exit game if Esc pressed
 
     cmp AH, 0x1C    
-    je _menu_enter
-    cmp AH, 0x48	;Jump if up arrow pressed
+    je _menu_enter  ;select option if Enter pressed
+    
+    cmp AH, 0x48	
+	je _menu_up     ;Jump if up arrow pressed
 
-	je _menu_up
-    cmp AH, 0x50	;Jump if down arrow pressed
-
-	je _menu_down
+    cmp AH, 0x50	
+	je _menu_down   ;Jump if down arrow pressed
+    
     jmp _main_menu        
 
-_game_lvl1:
+_start_game:
 
-    mov ax, word [sceenHeight]
-    mov bx, word [screenWidth]
-    mov di, 0
-    mov dl, 0
-    call _draw_rectangle
+    call _clear_screen
+    call _print_game_level
+    call _print_hot_keys
+    call _print_game_field
 
-    jmp _game_lvl1
+_loop:
+
+    mov AH, 1h		;Set ah to 1
+	int 16h		    ;Check keystroke interrupt
+	jz  _loop	;Return if no keystroke
+
+	mov AH, 0h		;Set ah to 0
+	int 16h		    ;Get keystroke interrupt
+
+    cmp AH, 0x01    
+    je _game_escape ;exit game to menu Esc pressed
+
+    jmp _loop
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -82,7 +94,7 @@ _menu_escape:
 _menu_enter: 
     cmp byte [lvlSelect], 4
     je finish 
-    jmp _game_lvl1
+    jmp _start_game
 
 ;
 ; move one option up on main menu
@@ -102,10 +114,14 @@ _menu_down:
     inc byte [lvlSelect]
     jmp _main_menu    
 
+_game_escape:
+    call _clear_screen
+    jmp _main_menu
+
 ;
 ; Method used to display title on main menu
 ;
-_print_tittle:
+_print_menu_tittle:
     mov DH, 4
     mov DL, 12
     mov BX, title
@@ -118,7 +134,7 @@ _print_tittle:
 ; verifies if lvl 1 is selected, if it is 
 ; it blinks the text
 ;
-_print_lvl1:
+_print_menu_lvl1:
     mov DH, 9      ;set row
     mov DL, 17     ;set column
     mov BX, lvl1   ;set text to print
@@ -132,7 +148,7 @@ _print_lvl1:
 ; verifies if lvl 2 is selected, if it is 
 ; it blinks the text
 ;
-_print_lvl2:
+_print_menu_lvl2:
     mov DH, 12     ;set row
     mov DL, 17     ;set column
     mov BX, lvl2   ;set text to print
@@ -146,7 +162,7 @@ _print_lvl2:
 ; verifies if lvl 3 is selected, if it is 
 ; it blinks the text
 ;
-_print_lvl3:
+_print_menu_lvl3:
     mov DH, 15     ;set row
     mov DL, 17     ;set column
     mov BX, lvl3   ;set text to print
@@ -160,12 +176,93 @@ _print_lvl3:
 ; verifies if exit game is selected, if it is 
 ; it blinks the text
 ;
-_print_exitGame:
+_print_menu_exitGame:
     mov DH, 19     ;set row
     mov DL, 16     ;set column
     mov BX, exitGame   ;set text to print
     mov CL, 4      ;option number
     call _display
+
+    ret    
+
+;
+;   Method used to print current level on game initialization
+;
+_print_game_level:
+    mov BX, lvl3
+    cmp byte [lvlSelect], 3
+    je _print_game_level_aux
+
+    mov BX, lvl2
+    cmp byte [lvlSelect], 2
+    je _print_game_level_aux
+
+    mov BX, lvl1
+
+_print_game_level_aux:
+    mov DH, 4
+    mov DL, 17
+    call _print_string
+
+    ret
+
+;
+; Print hotkeyson gama initialization 
+;
+_print_hot_keys:
+
+    mov BX, hotkeys
+    mov DH, 9
+    mov DL, 1
+    call _print_string
+
+    mov BX, hotkeys1
+    mov DH, 11
+    mov DL, 1
+    call _print_string
+
+    mov BX, hotkeys2
+    mov DH, 12
+    mov DL, 1
+    call _print_string
+
+    mov BX, hotkeys3
+    mov DH, 13
+    mov DL, 1
+    call _print_string
+
+    mov BX, hotkeys4
+    mov DH, 14
+    mov DL, 1
+    call _print_string
+
+    mov BX, hotkeys5
+    mov DH, 15
+    mov DL, 1
+    call _print_string
+
+    mov BX, hotkeys6
+    mov DH, 16
+    mov DL, 1
+    call _print_string
+
+    ret
+
+; 
+; Method used to print the box around the gamefield
+;
+_print_game_field: 
+    mov ax, 22
+    mov bx, 12
+    mov di, 29915
+    mov dl, 0xF
+    call _draw_rectangle
+
+    mov ax, 20
+    mov bx, 10
+    mov di, 30236
+    mov dl, 0x00
+    call _draw_rectangle
 
     ret    
 
@@ -269,15 +366,9 @@ _draw_horizontal_line:
 
     call _draw_pixel
     
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ; move di one pixel to the right
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    inc di
+    inc di ; move di one pixel to the right
     
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ; next pixel
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    loop _draw_horizontal_line
+    loop _draw_horizontal_line     ; next pixel
     
     ret
 
@@ -313,6 +404,14 @@ _draw_rectangle_loop:
     
     ret
 
+_clear_screen:
+    mov ax, word [sceenHeight]
+    mov bx, word [screenWidth]
+    mov di, 0
+    mov dl, 0
+    call _draw_rectangle
+
+    ret
 
 ;
 ; sleep n 100 milisecons 
@@ -350,6 +449,17 @@ section .data
     lvl2 db 'LEVEL 2$'
     lvl3 db 'LEVEL 3$'
     exitGame db 'EXIT GAME$'
+
+    hotkeys  db 'HOTKEYS$'
+    hotkeys1 db 'Left: ->$'
+    hotkeys2 db 'Right: <-$'
+    hotkeys3 db 'Down: v$'
+    hotkeys4 db 'Rotate Left: Q$'
+    hotkeys5 db 'Rotate Right: S$'
+    hotkeys6 db 'Exit Game: Esc$'
+
+
+
     blankText db '         $'
 
     screenWidth dw 320

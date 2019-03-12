@@ -32,37 +32,33 @@ _main_menu:
     call _print_lvl3
     call _print_exitGame
 
-    mov DI, 0; position
-    mov DL, 0x04 ; colour
-    call _print_pixel
+    mov BX, word [mainMenuDelay]
+    call _sleep
 
-    ;call _sleep
+ 	mov AH, 1h		;Set ah to 1
+	int 16h		;Check keystroke interrupt
+	jz  _main_menu	;Return if no keystroke
 
-    jmp _main_menu_input    
+	mov AH, 0h		;Set ah to 0
+	int 16h		;Get keystroke interrupt
+
+    cmp AH, 0x01    
+    je _menu_escape
+
+    cmp AH, 0x1C    
+    je _menu_enter
+    cmp AH, 0x48	;Jump if up arrow pressed
+
+	je _menu_up
+    cmp AH, 0x50	;Jump if down arrow pressed
+
+	je _menu_down
+    jmp _main_menu        
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;                 FUNCTIONS                ;;;  
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;
-; Used to check user input on main menu
-;
-_main_menu_input:
- 	mov AH, 1h		;Set ah to 1
-	int 16h		;Check keystroke interrupt
-	jz  _main_menu	;Return if no keystroke
-	mov AH, 0h		;Set ah to 0
-	int 16h		;Get keystroke interrupt
-    cmp AH, 0x01    
-    je _menu_escape
-    cmp AH, 0x1C    
-    je _menu_enter
-    cmp AH, 0x48	;Jump if up arrow pressed
-	je _menu_up
-    cmp AH, 0x50	;Jump if down arrow pressed
-	je _menu_down
-    jmp _main_menu
 
 ;
 ; If escape key pressed on main menu exit execution
@@ -233,23 +229,36 @@ _print_pixel:
     
     ret
 
-
+;
+; sleep n 100 milisecons 
+;  input:
+;       BX = number of 100 miliseconds
+;  
+_sleep:
+    call _ms_delay
+    dec BX
+    jnz _sleep 
+    
+    ret
 
 
 
 ;
 ; Method used to sleep the procesor
-;  Input:
-;       CX = sleep time in miliseconds
+;  for 100miliseconds 
 ;
-_sleep:
-    mov CX, 05h
-	mov DX, 86a0h
-	mov AH, 86h
-	int 15h
+_ms_delay: 
+    mov CX, 0x0000
+    mov DX, 0xffff
+    mov AH, 0x86
+    xor AL, AL
+    int 0x15
+    
     ret   
 
 section .data
+
+    mainMenuDelay dw 5
 
     title db '--- TETRIS 86 ---$'
     lvl1 db 'LEVEL 1$'

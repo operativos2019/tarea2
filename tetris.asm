@@ -80,7 +80,9 @@ _game_loop:
     dec byte [counter]
     cmp byte [counter], 0
     jne _continue
-    call _move_current_piece
+    call _move_down_current_piece
+    cmp AX, 1
+    je _game_lose
     call _reset_counter
 _continue:    
 
@@ -153,7 +155,7 @@ _game_escape:
 ;
 ;
 _game_down:
-    call _move_current_piece
+    call _move_down_current_piece
     call _reset_counter
     jmp _game_loop    
 
@@ -395,7 +397,9 @@ _spawn_current_piece:
     add word [currentPiece3], AX
 
     ret    
-
+;
+; print current piece on screen
+;
 _print_current_piece: 
     mov DL, byte [currentPieceColor]
     mov DI, word [currentPiece0]
@@ -412,6 +416,9 @@ _print_current_piece:
 
     ret
 
+;
+;   remove current piece from screen
+;
 _remove_current_piece:   
     mov DL, 0x0
     mov DI, word [currentPiece0]
@@ -424,7 +431,10 @@ _remove_current_piece:
     call _draw_pixel
     ret
 
-_move_current_piece:
+;
+; 
+;
+_move_down_current_piece:
 
     call _remove_current_piece
 
@@ -435,32 +445,17 @@ _move_current_piece:
     add word [currentPiece2], AX
     add word [currentPiece3], AX
 
-    mov DI, word[currentPiece0]
-    call _read_pixel
-    cmp Dl, 0x0
-    jne _lock_piece
+    call _detect_collision
 
-    mov DI, word[currentPiece1]
-    call _read_pixel
-    cmp Dl, 0x0
+    cmp AX, 0
     jne _lock_piece
-    
-    mov DI, word[currentPiece2]
-    call _read_pixel
-    cmp Dl, 0x0
-    jne _lock_piece
-    
-    mov DI, word[currentPiece3]
-    call _read_pixel
-    cmp Dl, 0x0
-    jne _lock_piece
-
     call _print_current_piece
-    
     ret
 
-
 _lock_piece:
+
+    mov AX, word [screenWidth]
+    
     sub word [currentPiece0], AX
     sub word [currentPiece1], AX
     sub word [currentPiece2], AX
@@ -469,11 +464,41 @@ _lock_piece:
     call _print_current_piece
     call _load_piece
     call _spawn_current_piece
+    call _detect_collision
     call _print_current_piece
-
     ret
 
+;
+; Detect collsion
+;       Output:
+;        AX  = 1 colision detected, 0 no colision detected
+_detect_collision:
+    
+    mov AX, 1                    ;collision = true
 
+    mov DI, word[currentPiece0]
+    call _read_pixel
+    cmp Dl, 0x0
+    jne _return                  ;if piece 0 collides return 
+
+    mov DI, word[currentPiece1]
+    call _read_pixel
+    cmp Dl, 0x0
+    jne _return                  ;if piece 1 collides return    
+    
+    mov DI, word[currentPiece2]
+    call _read_pixel
+    cmp Dl, 0x0
+    jne _return                  ;if piece 2 collides return 
+    
+    mov DI, word[currentPiece3]
+    call _read_pixel
+    cmp Dl, 0x0
+    jne _return                  ;if piece 3 collides return   
+
+    mov AX, 0                    ;collision = false 
+
+    ret
 
 ;
 ; Method used to print options on menu, 
@@ -728,7 +753,7 @@ section .data
     previewPiece3 dw 0
     previewPieceColor dq 0
 
-    gameFieldSpawn dw 30236
+    gameFieldSpawn dw 30240
 
     currentPiece0 dw 0
     currentPiece1 dw 0

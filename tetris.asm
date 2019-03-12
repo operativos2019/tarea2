@@ -55,6 +55,16 @@ _main_menu:
 	je _menu_down
     jmp _main_menu        
 
+_game_lvl1:
+
+    mov ax, word [sceenHeight]
+    mov bx, word [screenWidth]
+    mov di, 0
+    mov dl, 0
+    call _draw_rectangle
+
+    jmp _game_lvl1
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;                 FUNCTIONS                ;;;  
@@ -72,7 +82,7 @@ _menu_escape:
 _menu_enter: 
     cmp byte [lvlSelect], 4
     je finish 
-    jmp _main_menu
+    jmp _game_lvl1
 
 ;
 ; move one option up on main menu
@@ -215,7 +225,7 @@ _print_string:
 ;       DI - position
 ;       DL - colour
 ;
-_print_pixel:
+_draw_pixel:
 
     push AX
     push ES
@@ -228,6 +238,81 @@ _print_pixel:
     pop AX
     
     ret
+    
+;
+; Draw a vertical line di is modified to point to the first address 
+; after the end of the line
+;
+;  Input: 
+;       cx - line length
+;       di - position
+;       dl - colour
+;
+_draw_vertical_line:
+
+    call _draw_pixel
+    add di, [screenWidth]
+    loop _draw_vertical_line
+    
+    ret
+
+
+;
+; Draw a horizontal line, di is modified to point to the first address after the end of the line
+;
+; Input: 
+;      cx - line length
+;      di - position
+;      dl - colour
+;
+_draw_horizontal_line:
+
+    call _draw_pixel
+    
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ; move di one pixel to the right
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    inc di
+    
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ; next pixel
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    loop _draw_horizontal_line
+    
+    ret
+
+;
+; Draw a rectangle at the specified location and using the specified colour
+;
+; Input:
+;      ax - height
+;      bx - width
+;      di - position
+;      dl - colour
+;
+_draw_rectangle:
+    push di
+    push dx
+    push cx
+    
+    mov cx, ax ; for each horizontal line (there are [height] of them)
+
+_draw_rectangle_loop:    
+    push cx  ; draw a bx wide horizontal line
+    push di
+    mov cx, bx
+    call _draw_horizontal_line
+    pop di    ; restore di to the beginning of this line
+    add di, [screenWidth]     ; move di down one line, to the beginning of the next line
+    pop cx     ; restore loop counter
+    loop _draw_rectangle_loop     ; next horizontal line
+
+    pop cx
+    pop dx
+    pop di
+    
+    ret
+
 
 ;
 ; sleep n 100 milisecons 

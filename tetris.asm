@@ -75,6 +75,12 @@ _loop:
     cmp AH, 0x01    
     je _game_escape ;exit game to menu Esc pressed
 
+    cmp AH, 0x18    
+    je _game_win         ;win game
+
+    cmp AH, 0x19    
+    je _game_lose        ;lose game
+
     jmp _loop
 
 
@@ -114,8 +120,44 @@ _menu_down:
     inc byte [lvlSelect]
     jmp _main_menu    
 
+;
+; Method used to exit game to main menu
+;
 _game_escape:
     call _clear_screen
+    jmp _main_menu
+
+_game_win: 
+    call _clear_screen
+
+    mov DH, 10
+    mov DL, 17
+    mov BX, victory
+
+    call _print_string
+    call _print_press_any_key
+    jmp _wait_key
+
+_game_lose: 
+    call _clear_screen
+    mov DH, 10
+    mov DL, 16
+    mov BX, gameOver
+    call _print_string
+    call _print_press_any_key
+    jmp _wait_key    
+
+_wait_key:
+    mov AH, 1h		;Set ah to 1
+	int 16h		    ;Check keystroke interrupt
+	
+    jz  _wait_key	;Return if no keystroke
+
+    mov AH, 0h		;Set ah to 0
+	int 16h		    ;Get keystroke interrupt
+
+    call _clear_screen
+
     jmp _main_menu
 
 ;
@@ -207,7 +249,7 @@ _print_game_level_aux:
     ret
 
 ;
-; Print hotkeyson gama initialization 
+; Print hotkeys on game initialization 
 ;
 _print_hot_keys:
 
@@ -247,6 +289,20 @@ _print_hot_keys:
     call _print_string
 
     ret
+
+;
+; Method used to print press any key
+;     
+_print_press_any_key:
+
+    mov BX, pressAnyKey
+    mov DH, 23
+    mov DL, 14
+
+    call _print_string
+
+    ret
+
 
 ; 
 ; Method used to print the box around the gamefield
@@ -404,6 +460,9 @@ _draw_rectangle_loop:
     
     ret
 
+;
+; Turn black the screen
+;
 _clear_screen:
     mov ax, word [sceenHeight]
     mov bx, word [screenWidth]
@@ -424,8 +483,6 @@ _sleep:
     jnz _sleep 
     
     ret
-
-
 
 ;
 ; Method used to sleep the procesor
@@ -458,7 +515,10 @@ section .data
     hotkeys5 db 'Rotate Right: S$'
     hotkeys6 db 'Exit Game: Esc$'
 
+    victory  db 'VICTORY$'
+    gameOver db 'GAME_OVER$'
 
+    pressAnyKey db 'Press Any Key$'
 
     blankText db '         $'
 

@@ -63,11 +63,30 @@ _start_game:
     call _print_hot_keys
     call _print_game_field
 
-_loop:
+    ;call _load_preview_piece
+    ;call _load_current_piece 
+    ;call _load_preview_piece
+
+    call _load_piece
+    call _spawn_current_piece
+    call _print_current_piece
+    call _reset_counter
+
+_game_loop:
+
+    mov BX, 1
+    call _sleep
+
+    dec byte [counter]
+    cmp byte [counter], 0
+    jne _continue
+    call _move_current_piece
+    call _reset_counter
+_continue:    
 
     mov AH, 1h		;Set ah to 1
 	int 16h		    ;Check keystroke interrupt
-	jz  _loop	;Return if no keystroke
+	jz  _game_loop	;Return if no keystroke
 
 	mov AH, 0h		;Set ah to 0
 	int 16h		    ;Get keystroke interrupt
@@ -81,7 +100,10 @@ _loop:
     cmp AH, 0x19    
     je _game_lose        ;lose game
 
-    jmp _loop
+    cmp AH, 0x50   
+    je _game_down        ;down key pressed
+
+    jmp _game_loop
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -127,6 +149,17 @@ _game_escape:
     call _clear_screen
     jmp _main_menu
 
+;
+;
+;
+_game_down:
+    call _move_current_piece
+    call _reset_counter
+    jmp _game_loop    
+
+;
+;   Print Victory on screen and wait for user input 
+;
 _game_win: 
     call _clear_screen
 
@@ -138,6 +171,9 @@ _game_win:
     call _print_press_any_key
     jmp _wait_key
 
+;
+;   Print Game Over on screen and wait for user input 
+;
 _game_lose: 
     call _clear_screen
     mov DH, 10
@@ -147,6 +183,9 @@ _game_lose:
     call _print_press_any_key
     jmp _wait_key    
 
+;
+;   Wait for user to press any key
+;
 _wait_key:
     mov AH, 1h		;Set ah to 1
 	int 16h		    ;Check keystroke interrupt
@@ -320,7 +359,121 @@ _print_game_field:
     mov dl, 0x00
     call _draw_rectangle
 
+    ret  
+;
+; loads piece on 
+;    
+_load_piece:
+
+    mov AX, word [square0]
+    mov word [currentPiece0], AX
+
+    mov AX, word [square1]
+    mov word [currentPiece1], AX
+    
+    mov AX, word [square2]
+    mov word [currentPiece2], AX
+    
+    mov AX, word [square3]
+    mov word [currentPiece3], AX 
+    
+    mov AL, byte [squareColor]
+    mov byte [currentPieceColor], AL 
+
+    ret
+
+;
+; moves current piece to spawn position on gamefield
+;
+_spawn_current_piece:
+
+    mov AX, word [gameFieldSpawn]
+
+    add word [currentPiece0], AX
+    add word [currentPiece1], AX
+    add word [currentPiece2], AX
+    add word [currentPiece3], AX
+
     ret    
+
+_print_current_piece: 
+    mov DL, byte [currentPieceColor]
+    mov DI, word [currentPiece0]
+    call _draw_pixel
+
+    mov DI, word [currentPiece1]
+    call _draw_pixel
+
+    mov DI, word [currentPiece2]
+    call _draw_pixel
+
+    mov DI, word [currentPiece3]
+    call _draw_pixel
+
+    ret
+
+_remove_current_piece:   
+    mov DL, 0x0
+    mov DI, word [currentPiece0]
+    call _draw_pixel
+    mov DI, word [currentPiece1]
+    call _draw_pixel
+    mov DI, word [currentPiece2]
+    call _draw_pixel
+    mov DI, word [currentPiece3]
+    call _draw_pixel
+    ret
+
+_move_current_piece:
+
+    call _remove_current_piece
+
+    mov AX, word [screenWidth]
+
+    add word [currentPiece0], AX
+    add word [currentPiece1], AX
+    add word [currentPiece2], AX
+    add word [currentPiece3], AX
+
+    mov DI, word[currentPiece0]
+    call _read_pixel
+    cmp Dl, 0x0
+    jne _lock_piece
+
+    mov DI, word[currentPiece1]
+    call _read_pixel
+    cmp Dl, 0x0
+    jne _lock_piece
+    
+    mov DI, word[currentPiece2]
+    call _read_pixel
+    cmp Dl, 0x0
+    jne _lock_piece
+    
+    mov DI, word[currentPiece3]
+    call _read_pixel
+    cmp Dl, 0x0
+    jne _lock_piece
+
+    call _print_current_piece
+    
+    ret
+
+
+_lock_piece:
+    sub word [currentPiece0], AX
+    sub word [currentPiece1], AX
+    sub word [currentPiece2], AX
+    sub word [currentPiece3], AX
+
+    call _print_current_piece
+    call _load_piece
+    call _spawn_current_piece
+    call _print_current_piece
+
+    ret
+
+
 
 ;
 ; Method used to print options on menu, 
@@ -460,6 +613,28 @@ _draw_rectangle_loop:
     
     ret
 
+
+; Read a pixel's colour
+;
+; Input:
+;       di - position
+; Output:
+;       dl - colour
+;
+_read_pixel:
+
+    push ax
+    push es
+
+    mov ax, 0A000h
+    mov es, ax
+    mov byte dl, [es:di]
+    
+    pop es
+    pop ax
+    
+    ret    
+
 ;
 ; Turn black the screen
 ;
@@ -497,15 +672,37 @@ _ms_delay:
     
     ret   
 
+; 
+;   method used to reset counter after each move
+;    
+_reset_counter:
+    mov byte [counter], 3    ;if 
+    cmp byte [lvlSelect], 3
+    je _return 
+
+    mov byte [counter], 5    ;if
+    cmp byte [lvlSelect], 2  
+    je _return
+
+    mov byte [counter], 7    ;else
+
+_return:
+    ret
+    
+
 section .data
 
     mainMenuDelay dw 5
+
+    lvlSelect db 1
+    blink db 1  
 
     title db '--- TETRIS 86 ---$'
     lvl1 db 'LEVEL 1$'
     lvl2 db 'LEVEL 2$'
     lvl3 db 'LEVEL 3$'
     exitGame db 'EXIT GAME$'
+    blankText db '         $'
 
     hotkeys  db 'HOTKEYS$'
     hotkeys1 db 'Left: ->$'
@@ -520,10 +717,33 @@ section .data
 
     pressAnyKey db 'Press Any Key$'
 
-    blankText db '         $'
-
     screenWidth dw 320
     sceenHeight dw 200
 
-    lvlSelect db 1
-    blink db 1    
+    previewPieceSpawn dw 30236
+
+    previewPiece0 dw 0
+    previewPiece1 dw 0
+    previewPiece2 dw 0
+    previewPiece3 dw 0
+    previewPieceColor dq 0
+
+    gameFieldSpawn dw 30236
+
+    currentPiece0 dw 0
+    currentPiece1 dw 0
+    currentPiece2 dw 0
+    currentPiece3 dw 0
+    currentPieceColor dq 0
+
+    square0 dw 0
+    square1 dw 1
+    square2 dw 320
+    square3 dw 321
+    squareColor dq 0xb
+
+    counter db 0
+
+    
+
+     

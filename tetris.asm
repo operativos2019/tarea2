@@ -858,6 +858,8 @@ _sleep:
     call _ms_delay
     dec BX
     jnz _sleep 
+
+    call _increment_random6
     
     ret
 
@@ -873,6 +875,18 @@ _ms_delay:
     int 0x15
     
     ret   
+
+;
+; increments random counter
+;
+_increment_random6:
+    inc byte [random6]
+    cmp byte [random6], 6
+    je  _reset_random6 
+    ret
+_reset_random6:
+    mov byte[random6], 0
+    ret
 
 ; 
 ;   method used to reset counter after each move
@@ -947,6 +961,8 @@ section .data
     square2 dw 320
     square3 dw 321
     squareColor dq 0xb
+
+    random6 db 0
 
     counter db 0
 

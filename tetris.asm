@@ -7,7 +7,7 @@ jmp start
 
 start:
 
-    mov AX, 13h  ;enter grphical mode 
+    mov AX, 13h  ;enter graphical mode 
     int 10h
 
     jmp _main_menu
@@ -61,6 +61,9 @@ _start_game:
     call _clear_screen
     call _print_game_level
     call _print_hot_keys
+    call _print_next_piece
+    call _print_score_text
+    call _print_score
     call _print_game_field
 
     ;call _load_preview_piece
@@ -102,8 +105,17 @@ _continue:
     cmp AH, 0x19    
     je _game_lose        ;lose game
 
+    cmp AH, 0x17
+    je _increment_score 
+
     cmp AH, 0x50   
     je _game_down        ;down key pressed
+
+    cmp AH, 0x4b   
+    je _game_left        ;left key pressed
+
+    cmp AH, 0x4d   
+    je _game_right       ;right key pressed
 
     jmp _game_loop
 
@@ -124,6 +136,16 @@ _menu_escape:
 _menu_enter: 
     cmp byte [lvlSelect], 4
     je finish 
+
+    mov word [score], 200
+    cmp byte [lvlSelect], 3
+    je _start_game
+
+    mov word [score], 100
+    cmp byte [lvlSelect], 2
+    je _start_game
+
+    mov word [score], 0
     jmp _start_game
 
 ;
@@ -152,12 +174,55 @@ _game_escape:
     jmp _main_menu
 
 ;
-;
+; move the piece 1 space down
 ;
 _game_down:
     call _move_down_current_piece
     call _reset_counter
     jmp _game_loop    
+
+;
+; move the piece 1 space left
+;
+_game_left:
+    call _move_left_current_piece
+    jmp _game_loop    
+
+;
+; move the piece 1 space right
+;
+_game_right:
+    call _move_right_current_piece
+    jmp _game_loop        
+
+
+;
+; increments the score 10 points
+;
+_increment_score:
+    add word [score], 10
+    call _print_score
+
+    cmp byte [lvlSelect], 3 
+    jne _increment_score_lvl2
+    cmp word [score], 300 
+    je _game_win
+
+_increment_score_lvl2:
+    cmp byte [lvlSelect], 2 
+    jne _increment_score_lvl1
+    cmp word [score], 200    
+    je _next_level
+
+_increment_score_lvl1:
+    cmp word [score], 100
+    je _next_level
+
+    jmp _game_loop
+
+_next_level:
+    inc byte [lvlSelect]
+    jmp _start_game
 
 ;
 ;   Print Victory on screen and wait for user input 
@@ -332,6 +397,59 @@ _print_hot_keys:
     ret
 
 ;
+; print next piece on game initialation
+;
+_print_next_piece:
+    mov BX, nextPiece
+    mov DH, 11
+    mov DL, 26
+    call _print_string
+
+    ret    
+
+;
+; print next piece on game initialation
+;
+_print_score_text:
+    mov BX, scoreText
+    mov DH, 8
+    mov DL, 26
+    call _print_string
+
+    ret  
+
+;
+; print score variable
+;
+_print_score:
+
+    mov word ax, [score]
+    mov dl, 100
+    div dl ; hundreds in al, remainder in ah 
+    mov cl, '0'
+    add cl, al
+    mov byte [msg_score_buffer], cl ; set hundreds digit
+    
+    mov al, ah ; divide remainder again
+    xor ah, ah
+    mov dl, 10
+    div dl ; tens in al, remainder in ah
+    mov cl, '0'
+    add cl, al
+    mov byte [msg_score_buffer + 1], cl ; set tens digit
+    
+    mov cl, '0'
+    add cl, ah
+    mov byte [msg_score_buffer + 2], cl ; set units digit
+    
+    mov bx, msg_score_buffer
+    mov dh, 9
+    mov dl, 26
+    call _print_string
+    
+    ret
+
+;
 ; Method used to print press any key
 ;     
 _print_press_any_key:
@@ -343,7 +461,6 @@ _print_press_any_key:
     call _print_string
 
     ret
-
 
 ; 
 ; Method used to print the box around the gamefield
@@ -432,7 +549,8 @@ _remove_current_piece:
     ret
 
 ;
-; 
+; move piece one space down and verifies if is valid
+; if its not posible to move it, fix it and create a new piece
 ;
 _move_down_current_piece:
 
@@ -467,6 +585,65 @@ _lock_piece:
     call _detect_collision
     call _print_current_piece
     ret
+
+;
+; moves piece left and verfies if it is a valid move
+;
+_move_left_current_piece:
+
+    call _remove_current_piece
+
+    dec word [currentPiece0]
+    dec word [currentPiece1]
+    dec word [currentPiece2]
+    dec word [currentPiece3]
+
+    call _detect_collision
+
+    cmp AX, 0                 
+    jne _move_left_invalid
+    call _print_current_piece
+
+    ret
+
+_move_left_invalid:
+    inc word [currentPiece0]
+    inc word [currentPiece1]
+    inc word [currentPiece2]
+    inc word [currentPiece3]
+
+    call _print_current_piece
+
+    ret
+
+;
+; moves piece right and verfies if it is a valid move
+;
+_move_right_current_piece:
+
+    call _remove_current_piece
+
+    inc word [currentPiece0]
+    inc word [currentPiece1]
+    inc word [currentPiece2]
+    inc word [currentPiece3]
+
+    call _detect_collision
+
+    cmp AX, 0                 
+    jne _move_right_invalid
+    call _print_current_piece
+    ret
+
+_move_right_invalid:
+    dec word [currentPiece0]
+    dec word [currentPiece1]
+    dec word [currentPiece2]
+    dec word [currentPiece3]
+
+    call _print_current_piece
+    ret
+
 
 ;
 ; Detect collsion
@@ -740,10 +917,14 @@ section .data
     victory  db 'VICTORY$'
     gameOver db 'GAME_OVER$'
 
+    scoreText db 'SCORE:$'
+
     pressAnyKey db 'Press Any Key$'
 
     screenWidth dw 320
     sceenHeight dw 200
+
+    nextPiece db 'NEXT PIECE$'
 
     previewPieceSpawn dw 30236
 
@@ -768,6 +949,9 @@ section .data
     squareColor dq 0xb
 
     counter db 0
+
+    msg_score_buffer db "000$" ; holds the string representation of score
+    score dw 0 ; keeps score (representing total number of cleared lines)
 
     
 

@@ -1,7 +1,10 @@
 [BITS 16]
-org 100h
+[ORG 0x100] 
 
 section .text
+
+;mov ax, cs
+;mov ds, ax 
 
 jmp start
 
@@ -70,7 +73,7 @@ _start_game:
     ;call _load_current_piece 
     ;call _load_preview_piece
 
-    call _load_piece
+    call _load_preview_piece   ;cambiar
     call _spawn_current_piece
     call _print_current_piece
     call _reset_counter
@@ -480,9 +483,99 @@ _print_game_field:
 
     ret  
 ;
+; loads preview piece on variables based on random number
+;
+_load_preview_piece:
+
+    cmp byte [random5], 4
+    je _load_preview_piece_t
+
+    cmp byte [random5], 3
+    je _load_preview_piece_l
+
+    cmp byte [random5], 2
+    je _load_preview_piece_zigzag
+
+    cmp byte [random5], 1
+    je _load_preview_piece_bar
+
+    mov AX, word [square0]
+    mov word [currentPiece0], AX
+    mov AX, word [square1]
+    mov word [currentPiece1], AX
+    mov AX, word [square2]
+    mov word [currentPiece2], AX
+    mov AX, word [square3]
+    mov word [currentPiece3], AX 
+    mov AL, byte [squareColor]
+    mov byte [currentPieceColor], AL
+
+    ret 
+
+_load_preview_piece_t:
+
+    mov AX, word [t0]
+    mov word [currentPiece0], AX
+    mov AX, word [t1]
+    mov word [currentPiece1], AX
+    mov AX, word [t2]
+    mov word [currentPiece2], AX
+    mov AX, word [t3]
+    mov word [currentPiece3], AX 
+    mov AL, byte [tColor]
+    mov byte [currentPieceColor], AL
+
+    ret    
+
+_load_preview_piece_l:
+
+    mov AX, word [l0]
+    mov word [currentPiece0], AX
+    mov AX, word [l1]
+    mov word [currentPiece1], AX
+    mov AX, word [l2]
+    mov word [currentPiece2], AX
+    mov AX, word [l3]
+    mov word [currentPiece3], AX 
+    mov AL, byte [lColor]
+    mov byte [currentPieceColor], AL
+
+    ret 
+
+_load_preview_piece_zigzag:
+
+    mov AX, word [zigzag0]
+    mov word [currentPiece0], AX
+    mov AX, word [zigzag1]
+    mov word [currentPiece1], AX
+    mov AX, word [zigzag2]
+    mov word [currentPiece2], AX
+    mov AX, word [zigzag3]
+    mov word [currentPiece3], AX 
+    mov AL, byte [zigzagColor]
+    mov byte [currentPieceColor], AL
+
+    ret 
+
+_load_preview_piece_bar:
+
+    mov AX, word [bar0]
+    mov word [currentPiece0], AX
+    mov AX, word [bar1]
+    mov word [currentPiece1], AX
+    mov AX, word [bar2]
+    mov word [currentPiece2], AX
+    mov AX, word [bar3]
+    mov word [currentPiece3], AX 
+    mov AL, byte [barColor]
+    mov byte [currentPieceColor], AL
+
+    ret     
+
+;
 ; loads piece on 
 ;    
-_load_piece:
+_load_current_piece:
 
     mov AX, word [square0]
     mov word [currentPiece0], AX
@@ -580,7 +673,7 @@ _lock_piece:
     sub word [currentPiece3], AX
 
     call _print_current_piece
-    call _load_piece
+    call _load_preview_piece    ;cambiar
     call _spawn_current_piece
     call _detect_collision
     call _print_current_piece
@@ -859,7 +952,7 @@ _sleep:
     dec BX
     jnz _sleep 
 
-    call _increment_random6
+    call _increment_random5
     
     ret
 
@@ -877,15 +970,16 @@ _ms_delay:
     ret   
 
 ;
-; increments random counter
+; increments random counter, if random5 is 5 reset it to 0
+; 
 ;
-_increment_random6:
-    inc byte [random6]
-    cmp byte [random6], 6
-    je  _reset_random6 
+_increment_random5:
+    inc byte [random5]
+    cmp byte [random5], 5
+    je  _reset_random5 
     ret
-_reset_random6:
-    mov byte[random6], 0
+_reset_random5:
+    mov byte[random5], 0
     ret
 
 ; 
@@ -940,7 +1034,7 @@ section .data
 
     nextPiece db 'NEXT PIECE$'
 
-    previewPieceSpawn dw 30236
+    previewPieceSpawn dw 30400
 
     previewPiece0 dw 0
     previewPiece1 dw 0
@@ -960,9 +1054,33 @@ section .data
     square1 dw 1
     square2 dw 320
     square3 dw 321
-    squareColor dq 0xb
+    squareColor dq 0x9
 
-    random6 db 0
+    bar0 dw 0
+    bar1 dw 320
+    bar2 dw 640
+    bar3 dw 960
+    barColor dq 0xE
+
+    zigzag0 dw 0
+    zigzag1 dw 1
+    zigzag2 dw 321
+    zigzag3 dw 322
+    zigzagColor dq 0xA
+
+    l0 dw 0
+    l1 dw 320
+    l2 dw 640
+    l3 dw 641
+    lColor dq 0xC
+
+    t0 dw 0
+    t1 dw 1
+    t2 dw 320
+    t3 dw 321
+    tColor dq 0xB
+
+    random5 db 0
 
     counter db 0
 

@@ -69,11 +69,10 @@ _start_game:
     call _print_score
     call _print_game_field
 
-    ;call _load_preview_piece
-    ;call _load_current_piece 
-    ;call _load_preview_piece
+    call _load_preview_piece
+    call _load_current_piece 
+    call _load_preview_piece
 
-    call _load_preview_piece   ;cambiar
     call _spawn_current_piece
     call _print_current_piece
     call _reset_counter
@@ -500,75 +499,75 @@ _load_preview_piece:
     je _load_preview_piece_bar
 
     mov AX, word [square0]
-    mov word [currentPiece0], AX
+    mov word [previewPiece0], AX
     mov AX, word [square1]
-    mov word [currentPiece1], AX
+    mov word [previewPiece1], AX
     mov AX, word [square2]
-    mov word [currentPiece2], AX
+    mov word [previewPiece2], AX
     mov AX, word [square3]
-    mov word [currentPiece3], AX 
+    mov word [previewPiece3], AX 
     mov AL, byte [squareColor]
-    mov byte [currentPieceColor], AL
+    mov byte [previewPieceColor], AL
 
     ret 
 
 _load_preview_piece_t:
 
     mov AX, word [t0]
-    mov word [currentPiece0], AX
+    mov word [previewPiece0], AX
     mov AX, word [t1]
-    mov word [currentPiece1], AX
+    mov word [previewPiece1], AX
     mov AX, word [t2]
-    mov word [currentPiece2], AX
+    mov word [previewPiece2], AX
     mov AX, word [t3]
-    mov word [currentPiece3], AX 
+    mov word [previewPiece3], AX 
     mov AL, byte [tColor]
-    mov byte [currentPieceColor], AL
+    mov byte [previewPieceColor], AL
 
     ret    
 
 _load_preview_piece_l:
 
     mov AX, word [l0]
-    mov word [currentPiece0], AX
+    mov word [previewPiece0], AX
     mov AX, word [l1]
-    mov word [currentPiece1], AX
+    mov word [previewPiece1], AX
     mov AX, word [l2]
-    mov word [currentPiece2], AX
+    mov word [previewPiece2], AX
     mov AX, word [l3]
-    mov word [currentPiece3], AX 
+    mov word [previewPiece3], AX 
     mov AL, byte [lColor]
-    mov byte [currentPieceColor], AL
+    mov byte [previewPieceColor], AL
 
     ret 
 
 _load_preview_piece_zigzag:
 
     mov AX, word [zigzag0]
-    mov word [currentPiece0], AX
+    mov word [previewPiece0], AX
     mov AX, word [zigzag1]
-    mov word [currentPiece1], AX
+    mov word [previewPiece1], AX
     mov AX, word [zigzag2]
-    mov word [currentPiece2], AX
+    mov word [previewPiece2], AX
     mov AX, word [zigzag3]
-    mov word [currentPiece3], AX 
+    mov word [previewPiece3], AX 
     mov AL, byte [zigzagColor]
-    mov byte [currentPieceColor], AL
+    mov byte [previewPieceColor], AL
 
     ret 
 
 _load_preview_piece_bar:
 
     mov AX, word [bar0]
-    mov word [currentPiece0], AX
+    mov word [previewPiece0], AX
     mov AX, word [bar1]
-    mov word [currentPiece1], AX
+    mov word [previewPiece1], AX
     mov AX, word [bar2]
-    mov word [currentPiece2], AX
+    mov word [previewPiece2], AX
     mov AX, word [bar3]
-    mov word [currentPiece3], AX 
+    mov word [previewPiece3], AX 
     mov AL, byte [barColor]
-    mov byte [currentPieceColor], AL
+    mov byte [previewPieceColor], AL
 
     ret     
 
@@ -577,19 +576,19 @@ _load_preview_piece_bar:
 ;    
 _load_current_piece:
 
-    mov AX, word [square0]
+    mov AX, word [previewPiece0]
     mov word [currentPiece0], AX
 
-    mov AX, word [square1]
+    mov AX, word [previewPiece1]
     mov word [currentPiece1], AX
     
-    mov AX, word [square2]
+    mov AX, word [previewPiece2]
     mov word [currentPiece2], AX
     
-    mov AX, word [square3]
+    mov AX, word [previewPiece3]
     mov word [currentPiece3], AX 
     
-    mov AL, byte [squareColor]
+    mov AL, byte [previewPieceColor]
     mov byte [currentPieceColor], AL 
 
     ret
@@ -673,7 +672,11 @@ _lock_piece:
     sub word [currentPiece3], AX
 
     call _print_current_piece
-    call _load_preview_piece    ;cambiar
+    call _load_current_piece   
+
+    call _load_preview_piece
+                            ;print preview
+
     call _spawn_current_piece
     call _detect_collision
     call _print_current_piece
@@ -1075,9 +1078,9 @@ section .data
     lColor dq 0xC
 
     t0 dw 0
-    t1 dw 1
-    t2 dw 320
-    t3 dw 321
+    t1 dw 320
+    t2 dw 321
+    t3 dw 640
     tColor dq 0xB
 
     random5 db 0

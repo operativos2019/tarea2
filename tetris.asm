@@ -70,11 +70,14 @@ _start_game:
     call _print_game_field
 
     call _load_preview_piece
+    call _move_preview_to_preview
     call _load_current_piece 
+
     call _load_preview_piece
+    call _move_preview_to_preview
     call _print_preview_piece
 
-    call _spawn_current_piece
+    call _move_current_to_spawn
     call _print_current_piece
     call _reset_counter
 
@@ -595,16 +598,35 @@ _load_current_piece:
     ret
 
 ;
+; moves preview piece to preview position
+;
+_move_preview_to_preview:
+
+    mov AX, word [previewPieceSpawn]
+
+    add word [previewPiece0], AX
+    add word [previewPiece1], AX
+    add word [previewPiece2], AX
+    add word [previewPiece3], AX
+
+    ret       
+
+;
 ; moves current piece to spawn position on gamefield
 ;
-_spawn_current_piece:
+_move_current_to_spawn:
 
-    mov AX, word [gameFieldSpawn]
+    ;mov AX, word [gameFieldSpawn]
 
-    add word [currentPiece0], AX
-    add word [currentPiece1], AX
-    add word [currentPiece2], AX
-    add word [currentPiece3], AX
+    ;add word [currentPiece0], AX
+    ;add word [currentPiece1], AX
+    ;add word [currentPiece2], AX
+    ;add word [currentPiece3], AX
+
+    sub word [currentPiece0], 15
+    sub word [currentPiece1], 15
+    sub word [currentPiece2], 15
+    sub word [currentPiece3], 15
 
     ret   
 
@@ -712,9 +734,10 @@ _lock_piece:
 
     call _erase_preview_piece
     call _load_preview_piece
+    call _move_preview_to_preview
     call _print_preview_piece
 
-    call _spawn_current_piece
+    call _move_current_to_spawn
     call _detect_collision
     call _print_current_piece
     ret
@@ -1074,7 +1097,7 @@ section .data
 
     nextPiece db 'NEXT PIECE$'
 
-    previewPieceSpawn dw 30400
+    previewPieceSpawn dw 30255
 
     previewPiece0 dw 0
     previewPiece1 dw 0

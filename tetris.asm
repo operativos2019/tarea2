@@ -7,17 +7,17 @@ jmp start
 
 start:
 
-    mov AX, 13h  ;enter graphical mode 
-    int 10h
+    mov AX, 0x13  ;enter graphical mode 
+    int 0x10
 
     jmp _main_menu
 
 finish: 
 
     mov AX, 3  ;exit graphical mode 
-    int 10h
+    int 0x10
 
-    int 21h    ;DOS interruption
+    int 0x21    ;DOS interruption
 
     ret
 
@@ -35,12 +35,12 @@ _main_menu:
     mov BX, word [mainMenuDelay]
     call _sleep
 
- 	mov AH, 1h		;Set ah to 1
-	int 16h		    ;Check keystroke interrupt
+ 	mov AH, 0x1		;Set ah to 1
+	int 0x16		    ;Check keystroke interrupt
 	jz  _main_menu	;Return if no keystroke
 
-	mov AH, 0h		;Set ah to 0
-	int 16h		    ;Get keystroke interrupt
+	mov AH, 0x0		;Set ah to 0
+	int 0x16		    ;Get keystroke interrupt
 
     cmp AH, 0x01    
     je _menu_escape ;exit game if Esc pressed
@@ -89,12 +89,12 @@ _game_loop:
     call _reset_counter
 _continue:    
 
-    mov AH, 1h		;Set ah to 1
-	int 16h		    ;Check keystroke interrupt
+    mov AH, 0x1		;Set ah to 1
+	int 0x16		    ;Check keystroke interrupt
 	jz  _game_loop	;Return if no keystroke
 
-	mov AH, 0h		;Set ah to 0
-	int 16h		    ;Get keystroke interrupt
+	mov AH, 0x0		;Set ah to 0
+	int 0x16		    ;Get keystroke interrupt
 
     cmp AH, 0x01    
     je _game_escape ;exit game to menu Esc pressed
@@ -254,13 +254,13 @@ _game_lose:
 ;   Wait for user to press any key
 ;
 _wait_key:
-    mov AH, 1h		;Set ah to 1
-	int 16h		    ;Check keystroke interrupt
+    mov AH, 0x1		;Set ah to 1
+	int 0x16		    ;Check keystroke interrupt
 	
     jz  _wait_key	;Return if no keystroke
 
-    mov AH, 0h		;Set ah to 0
-	int 16h		    ;Get keystroke interrupt
+    mov AH, 0x0		;Set ah to 0
+	int 0x16		    ;Get keystroke interrupt
 
     call _clear_screen
 
@@ -718,12 +718,12 @@ _print_string:
     push BX
     mov  AH, 2
     xor  BH, BH ;set BH to 0
-    int  10h
+    int  0x10
     
     ; output string
-    mov AH, 9h
+    mov AH, 0x9
     pop DX ;now DX is BX prevoius value
-    int 21h
+    int 0x21
     
     ret
 
@@ -738,7 +738,7 @@ _draw_pixel:
     push AX
     push ES
 
-    mov AX, 0A000h
+    mov AX, 0x0A000
     mov ES, AX
     mov byte [ES:DI], DL
     
@@ -828,7 +828,7 @@ _read_pixel:
     push ax
     push es
 
-    mov ax, 0A000h
+    mov ax, 0x0A000
     mov es, ax
     mov byte dl, [es:di]
     
@@ -929,7 +929,7 @@ section .data
     hotkeys6 db 'Exit Game: Esc$'
 
     victory  db 'VICTORY$'
-    gameOver db 'GAME_OVER$'
+    gameOver db 'GAME OVER$'
 
     scoreText db 'SCORE:$'
 

@@ -72,6 +72,7 @@ _start_game:
     call _load_preview_piece
     call _load_current_piece 
     call _load_preview_piece
+    call _print_preview_piece
 
     call _spawn_current_piece
     call _print_current_piece
@@ -605,7 +606,27 @@ _spawn_current_piece:
     add word [currentPiece2], AX
     add word [currentPiece3], AX
 
+    ret   
+
+;
+; print preview piece on screen
+;
+_print_preview_piece: 
+    mov DL, byte [previewPieceColor]
+    mov DI, word [previewPiece0]
+    call _draw_pixel
+
+    mov DI, word [previewPiece1]
+    call _draw_pixel
+
+    mov DI, word [previewPiece2]
+    call _draw_pixel
+
+    mov DI, word [previewPiece3]
+    call _draw_pixel
+
     ret    
+
 ;
 ; print current piece on screen
 ;
@@ -626,9 +647,24 @@ _print_current_piece:
     ret
 
 ;
+;   remove preview piece from screen
+;
+_erase_preview_piece:   
+    mov DL, 0x0
+    mov DI, word [previewPiece0]
+    call _draw_pixel
+    mov DI, word [previewPiece1]
+    call _draw_pixel
+    mov DI, word [previewPiece2]
+    call _draw_pixel
+    mov DI, word [previewPiece3]
+    call _draw_pixel
+    ret
+
+;
 ;   remove current piece from screen
 ;
-_remove_current_piece:   
+_erase_current_piece:   
     mov DL, 0x0
     mov DI, word [currentPiece0]
     call _draw_pixel
@@ -646,7 +682,7 @@ _remove_current_piece:
 ;
 _move_down_current_piece:
 
-    call _remove_current_piece
+    call _erase_current_piece
 
     mov AX, word [screenWidth]
 
@@ -674,8 +710,9 @@ _lock_piece:
     call _print_current_piece
     call _load_current_piece   
 
+    call _erase_preview_piece
     call _load_preview_piece
-                            ;print preview
+    call _print_preview_piece
 
     call _spawn_current_piece
     call _detect_collision
@@ -687,7 +724,7 @@ _lock_piece:
 ;
 _move_left_current_piece:
 
-    call _remove_current_piece
+    call _erase_current_piece
 
     dec word [currentPiece0]
     dec word [currentPiece1]
@@ -717,7 +754,7 @@ _move_left_invalid:
 ;
 _move_right_current_piece:
 
-    call _remove_current_piece
+    call _erase_current_piece
 
     inc word [currentPiece0]
     inc word [currentPiece1]
@@ -1022,7 +1059,7 @@ section .data
     hotkeys2 db 'Right: <-$'
     hotkeys3 db 'Down: v$'
     hotkeys4 db 'Rotate Left: Q$'
-    hotkeys5 db 'Rotate Right: S$'
+    hotkeys5 db 'Rotate Right: W$'
     hotkeys6 db 'Exit Game: Esc$'
 
     victory  db 'VICTORY$'

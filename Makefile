@@ -1,8 +1,8 @@
 ASM=nasm
 FLAGS= -f bin
 BL=bootloader
-#SO=hello
-SO=test4
+SO=hell
+#SO=tetrisNew
 COD=.asm
 BIN=.bin
 IMG=.img

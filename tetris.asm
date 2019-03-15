@@ -1,23 +1,43 @@
 [BITS 16]
-org 100h
+[ORG 0x0000] 
 
 section .text
 
-jmp start
+mov ax, cs
+mov ds, ax   	; Copy CS to DS (we can't do it directly so we use AX temporarily)
+
+        clc
+        jc      boot
+        mov     si,0x0100
+        mov     di,0x7c00
+        mov     cx,512
+        rep     movsb
+        xchg    ax,cx
+        call    start
+        ret
+
+boot    mov     sp,0xffff
+        push    cs
+
 
 start:
 
-    mov AX, 13h  ;enter graphical mode 
-    int 10h
+    mov ah, 0x00 	;Set video mode
+	;mov al, 0x0E	;graphics, 320x200 res, 8x8 pixel box
+    mov al, 0x13	;graphics, 320x200 res, 8x8 pixel box
+	int 0x10
+
+	mov ah, 0x0c	;Write graphics pixel
+	mov bh, 0x00 	;page #0
 
     jmp _main_menu
 
 finish: 
 
     mov AX, 3  ;exit graphical mode 
-    int 10h
+    int 0x10
 
-    int 21h    ;DOS interruption
+    int 0x21    ;DOS interruption
 
     ret
 
@@ -35,12 +55,12 @@ _main_menu:
     mov BX, word [mainMenuDelay]
     call _sleep
 
- 	mov AH, 1h		;Set ah to 1
-	int 16h		    ;Check keystroke interrupt
+ 	mov AH, 0x1		;Set ah to 1
+	int 0x16		    ;Check keystroke interrupt
 	jz  _main_menu	;Return if no keystroke
 
-	mov AH, 0h		;Set ah to 0
-	int 16h		    ;Get keystroke interrupt
+	mov AH, 0x0		;Set ah to 0
+	int 0x16		    ;Get keystroke interrupt
 
     cmp AH, 0x01    
     je _menu_escape ;exit game if Esc pressed
@@ -59,19 +79,23 @@ _main_menu:
 _start_game:
 
     call _clear_screen
+    call _to_fix_text
     call _print_game_level
     call _print_hot_keys
     call _print_next_piece
     call _print_score_text
-    call _print_score
+    ;call _print_score
     call _print_game_field
 
-    ;call _load_preview_piece
-    ;call _load_current_piece 
-    ;call _load_preview_piece
+    call _load_preview_piece
+    call _move_preview_to_preview
+    call _load_current_piece 
 
-    call _load_piece
-    call _spawn_current_piece
+    call _load_preview_piece
+    call _move_preview_to_preview
+    call _print_preview_piece
+
+    call _move_current_to_spawn
     call _print_current_piece
     call _reset_counter
 
@@ -88,13 +112,13 @@ _game_loop:
     je _game_lose
     call _reset_counter
 _continue:    
-
-    mov AH, 1h		;Set ah to 1
-	int 16h		    ;Check keystroke interrupt
+_print_sc
+    mov AH, 0x1		;Set ah to 1
+	int 0x16		    ;Check keystroke interrupt
 	jz  _game_loop	;Return if no keystroke
 
-	mov AH, 0h		;Set ah to 0
-	int 16h		    ;Get keystroke interrupt
+	mov AH, 0x0		;Set ah to 0
+	int 0x16		    ;Get keystroke interrupt
 
     cmp AH, 0x01    
     je _game_escape ;exit game to menu Esc pressed
@@ -254,13 +278,13 @@ _game_lose:
 ;   Wait for user to press any key
 ;
 _wait_key:
-    mov AH, 1h		;Set ah to 1
-	int 16h		    ;Check keystroke interrupt
+    mov AH, 0x1		;Set ah to 1
+	int 0x16		    ;Check keystroke interrupt
 	
     jz  _wait_key	;Return if no keystroke
 
-    mov AH, 0h		;Set ah to 0
-	int 16h		    ;Get keystroke interrupt
+    mov AH, 0x0		;Set ah to 0
+	int 0x16		    ;Get keystroke interrupt
 
     call _clear_screen
 
@@ -270,10 +294,13 @@ _wait_key:
 ; Method used to display title on main menu
 ;
 _print_menu_tittle:
-    mov DH, 4
-    mov DL, 12
-    mov BX, title
-    call _print_string
+    mov si, title
+	mov bl, 2   ;Set green color
+	mov dh, 4	;Set char print row
+	mov dl, 12	;Set char print column
+	mov bh, 0   ;Set page 0lvl1
+	mov cx, 1	;Set number of times
+	call _print_string
 
     ret
 
@@ -283,11 +310,13 @@ _print_menu_tittle:
 ; it blinks the text
 ;
 _print_menu_lvl1:
-    mov DH, 9      ;set row
-    mov DL, 17     ;set column
-    mov BX, lvl1   ;set text to print
-    mov CL, 1      ;option number
-    call _display
+    mov si, lvl1
+	mov bl, 2   ;Set green color
+	mov dh, 15	;Set char print row
+	mov dl, 12	;Set char print column
+	mov bh, 0   ;Set page 0lvl1
+	mov cx, 1	;Set number of times	
+	call _print_string
 
     ret
 
@@ -297,11 +326,13 @@ _print_menu_lvl1:
 ; it blinks the text
 ;
 _print_menu_lvl2:
-    mov DH, 12     ;set row
-    mov DL, 17     ;set column
-    mov BX, lvl2   ;set text to print
-    mov CL, 2      ;option number
-    call _display
+    mov si, lvl2
+	mov bl, 2   ;Set green color
+	mov dh, 17	;Set char print row
+	mov dl, 12	;Set char print column
+	mov bh, 0   ;Set page 0lvl1
+	mov cx, 1	;Set number of times
+	call _print_string
 
     ret
 
@@ -311,11 +342,13 @@ _print_menu_lvl2:
 ; it blinks the text
 ;
 _print_menu_lvl3:
-    mov DH, 15     ;set row
-    mov DL, 17     ;set column
-    mov BX, lvl3   ;set text to print
-    mov CL, 3      ;option number
-    call _display
+    mov si, lvl3
+	mov bl, 2   ;Set green color
+	mov dh, 19	;Set char print row
+	mov dl, 12	;Set char print column
+	mov bh, 0   ;Set page 0lvl1
+	mov cx, 1	;Set number of times
+	call _print_string
 
     ret
 
@@ -337,15 +370,15 @@ _print_menu_exitGame:
 ;   Method used to print current level on game initialization
 ;
 _print_game_level:
-    mov BX, lvl3
+    mov si, lvl3
     cmp byte [lvlSelect], 3
     je _print_game_level_aux
 
-    mov BX, lvl2
+    mov si, lvl2
     cmp byte [lvlSelect], 2
     je _print_game_level_aux
 
-    mov BX, lvl1
+    mov si, lvl1
 
 _print_game_level_aux:
     mov DH, 4
@@ -354,27 +387,36 @@ _print_game_level_aux:
 
     ret
 
+_to_fix_text:
+    mov si, blankText
+    mov bl, 2   ;Set green color
+	mov dh, 4	;Set char print row
+	mov dl, 12	;Set char print column
+	mov bh, 0   ;Set page 0lvl1
+	mov cx, 1	;Set number of times
+    call _print_string
+
 ;
 ; Print hotkeys on game initialization 
 ;
 _print_hot_keys:
 
-    mov BX, hotkeys
+    mov si, hotkeys
     mov DH, 9
     mov DL, 1
     call _print_string
 
-    mov BX, hotkeys1
+    mov si, hotkeys1
     mov DH, 11
     mov DL, 1
     call _print_string
 
-    mov BX, hotkeys2
+    mov si, hotkeys2
     mov DH, 12
     mov DL, 1
     call _print_string
 
-    mov BX, hotkeys3
+    mov si, hotkeys3
     mov DH, 13
     mov DL, 1
     call _print_string
@@ -384,12 +426,12 @@ _print_hot_keys:
     mov DL, 1
     call _print_string
 
-    mov BX, hotkeys5
+    mov si, hotkeys5
     mov DH, 15
     mov DL, 1
     call _print_string
 
-    mov BX, hotkeys6
+    mov si, hotkeys6
     mov DH, 16
     mov DL, 1
     call _print_string
@@ -400,7 +442,7 @@ _print_hot_keys:
 ; print next piece on game initialation
 ;
 _print_next_piece:
-    mov BX, nextPiece
+    mov si, nextPiece
     mov DH, 11
     mov DL, 26
     call _print_string
@@ -411,7 +453,7 @@ _print_next_piece:
 ; print next piece on game initialation
 ;
 _print_score_text:
-    mov BX, scoreText
+    mov si, scoreText
     mov DH, 8
     mov DL, 26
     call _print_string
@@ -442,7 +484,7 @@ _print_score:
     add cl, ah
     mov byte [msg_score_buffer + 2], cl ; set units digit
     
-    mov bx, msg_score_buffer
+    mov si, msg_score_buffer
     mov dh, 9
     mov dl, 26
     call _print_string
@@ -480,40 +522,169 @@ _print_game_field:
 
     ret  
 ;
-; loads piece on 
-;    
-_load_piece:
+; loads preview piece on variables based on random number
+;
+_load_preview_piece:
+
+    cmp byte [random5], 4
+    je _load_preview_piece_t
+
+    cmp byte [random5], 3
+    je _load_preview_piece_l
+
+    cmp byte [random5], 2
+    je _load_preview_piece_zigzag
+
+    cmp byte [random5], 1
+    je _load_preview_piece_bar
 
     mov AX, word [square0]
+    mov word [previewPiece0], AX
+    mov AX, word [square1]
+    mov word [previewPiece1], AX
+    mov AX, word [square2]
+    mov word [previewPiece2], AX
+    mov AX, word [square3]
+    mov word [previewPiece3], AX 
+    mov AL, byte [squareColor]
+    mov byte [previewPieceColor], AL
+
+    ret 
+
+_load_preview_piece_t:
+
+    mov AX, word [t0]
+    mov word [previewPiece0], AX
+    mov AX, word [t1]
+    mov word [previewPiece1], AX
+    mov AX, word [t2]
+    mov word [previewPiece2], AX
+    mov AX, word [t3]
+    mov word [previewPiece3], AX 
+    mov AL, byte [tColor]
+    mov byte [previewPieceColor], AL
+
+    ret    
+
+_load_preview_piece_l:
+
+    mov AX, word [l0]
+    mov word [previewPiece0], AX
+    mov AX, word [l1]
+    mov word [previewPiece1], AX
+    mov AX, word [l2]
+    mov word [previewPiece2], AX
+    mov AX, word [l3]
+    mov word [previewPiece3], AX 
+    mov AL, byte [lColor]
+    mov byte [previewPieceColor], AL
+
+    ret 
+
+_load_preview_piece_zigzag:
+
+    mov AX, word [zigzag0]
+    mov word [previewPiece0], AX
+    mov AX, word [zigzag1]
+    mov word [previewPiece1], AX
+    mov AX, word [zigzag2]
+    mov word [previewPiece2], AX
+    mov AX, word [zigzag3]
+    mov word [previewPiece3], AX 
+    mov AL, byte [zigzagColor]
+    mov byte [previewPieceColor], AL
+
+    ret 
+
+_load_preview_piece_bar:
+
+    mov AX, word [bar0]
+    mov word [previewPiece0], AX
+    mov AX, word [bar1]
+    mov word [previewPiece1], AX
+    mov AX, word [bar2]
+    mov word [previewPiece2], AX
+    mov AX, word [bar3]
+    mov word [previewPiece3], AX 
+    mov AL, byte [barColor]
+    mov byte [previewPieceColor], AL
+
+    ret     
+
+;
+; loads piece on 
+;    
+_load_current_piece:
+
+    mov AX, word [previewPiece0]
     mov word [currentPiece0], AX
 
-    mov AX, word [square1]
+    mov AX, word [previewPiece1]
     mov word [currentPiece1], AX
     
-    mov AX, word [square2]
+    mov AX, word [previewPiece2]
     mov word [currentPiece2], AX
     
-    mov AX, word [square3]
+    mov AX, word [previewPiece3]
     mov word [currentPiece3], AX 
     
-    mov AL, byte [squareColor]
+    mov AL, byte [previewPieceColor]
     mov byte [currentPieceColor], AL 
 
     ret
 
 ;
+; moves preview piece to preview position
+;
+_move_preview_to_preview:
+
+    mov AX, word [previewPieceSpawn]
+
+    add word [previewPiece0], AX
+    add word [previewPiece1], AX
+    add word [previewPiece2], AX
+    add word [previewPiece3], AX
+
+    ret       
+
+;
 ; moves current piece to spawn position on gamefield
 ;
-_spawn_current_piece:
+_move_current_to_spawn:
 
-    mov AX, word [gameFieldSpawn]
+    ;mov AX, word [gameFieldSpawn]
 
-    add word [currentPiece0], AX
-    add word [currentPiece1], AX
-    add word [currentPiece2], AX
-    add word [currentPiece3], AX
+    ;add word [currentPiece0], AX
+    ;add word [currentPiece1], AX
+    ;add word [currentPiece2], AX
+    ;add word [currentPiece3], AX
+
+    sub word [currentPiece0], 15
+    sub word [currentPiece1], 15
+    sub word [currentPiece2], 15
+    sub word [currentPiece3], 15
+
+    ret   
+
+;
+; print preview piece on screen
+;
+_print_preview_piece: 
+    mov DL, byte [previewPieceColor]
+    mov DI, word [previewPiece0]
+    call _draw_pixel
+
+    mov DI, word [previewPiece1]
+    call _draw_pixel
+
+    mov DI, word [previewPiece2]
+    call _draw_pixel
+
+    mov DI, word [previewPiece3]
+    call _draw_pixel
 
     ret    
+
 ;
 ; print current piece on screen
 ;
@@ -534,9 +705,24 @@ _print_current_piece:
     ret
 
 ;
+;   remove preview piece from screen
+;
+_erase_preview_piece:   
+    mov DL, 0x0
+    mov DI, word [previewPiece0]
+    call _draw_pixel
+    mov DI, word [previewPiece1]
+    call _draw_pixel
+    mov DI, word [previewPiece2]
+    call _draw_pixel
+    mov DI, word [previewPiece3]
+    call _draw_pixel
+    ret
+
+;
 ;   remove current piece from screen
 ;
-_remove_current_piece:   
+_erase_current_piece:   
     mov DL, 0x0
     mov DI, word [currentPiece0]
     call _draw_pixel
@@ -554,7 +740,7 @@ _remove_current_piece:
 ;
 _move_down_current_piece:
 
-    call _remove_current_piece
+    call _erase_current_piece
 
     mov AX, word [screenWidth]
 
@@ -580,8 +766,14 @@ _lock_piece:
     sub word [currentPiece3], AX
 
     call _print_current_piece
-    call _load_piece
-    call _spawn_current_piece
+    call _load_current_piece   
+
+    call _erase_preview_piece
+    call _load_preview_piece
+    call _move_preview_to_preview
+    call _print_preview_piece
+
+    call _move_current_to_spawn
     call _detect_collision
     call _print_current_piece
     ret
@@ -591,7 +783,7 @@ _lock_piece:
 ;
 _move_left_current_piece:
 
-    call _remove_current_piece
+    call _erase_current_piece
 
     dec word [currentPiece0]
     dec word [currentPiece1]
@@ -621,7 +813,7 @@ _move_left_invalid:
 ;
 _move_right_current_piece:
 
-    call _remove_current_piece
+    call _erase_current_piece
 
     inc word [currentPiece0]
     inc word [currentPiece1]
@@ -713,19 +905,19 @@ _display_no_blink:
 ;       BX = address of string
 ;
 _print_string:
+	mov ah, 0x2	;Set cursor position interrupt
+	int 10h
+	lodsb		;Move si pointer contents to al
+	or al, al	;Break if end of string
+	jz return
+	mov ah, 0xa	;Teletype output interrupt
+	int 10h		;
+	inc dl		;Increment column index
+	jmp _print_string	;Loop to itself
 
-    ; position cursor
-    push BX
-    mov  AH, 2
-    xor  BH, BH ;set BH to 0
-    int  10h
-    
-    ; output string
-    mov AH, 9h
-    pop DX ;now DX is BX prevoius value
-    int 21h
-    
-    ret
+;Return from procedure
+return:
+	ret
 
 ; Draw a pixel
 ;
@@ -738,7 +930,7 @@ _draw_pixel:
     push AX
     push ES
 
-    mov AX, 0A000h
+    mov AX, 0x0A000
     mov ES, AX
     mov byte [ES:DI], DL
     
@@ -828,7 +1020,7 @@ _read_pixel:
     push ax
     push es
 
-    mov ax, 0A000h
+    mov ax, 0x0A000
     mov es, ax
     mov byte dl, [es:di]
     
@@ -859,7 +1051,7 @@ _sleep:
     dec BX
     jnz _sleep 
 
-    call _increment_random6
+    call _increment_random5
     
     ret
 
@@ -877,15 +1069,16 @@ _ms_delay:
     ret   
 
 ;
-; increments random counter
+; increments random counter, if random5 is 5 reset it to 0
+; 
 ;
-_increment_random6:
-    inc byte [random6]
-    cmp byte [random6], 6
-    je  _reset_random6 
+_increment_random5:
+    inc byte [random5]
+    cmp byte [random5], 5
+    je  _reset_random5 
     ret
-_reset_random6:
-    mov byte[random6], 0
+_reset_random5:
+    mov byte[random5], 0
     ret
 
 ; 
@@ -913,34 +1106,35 @@ section .data
     lvlSelect db 1
     blink db 1  
 
-    title db '--- TETRIS 86 ---$'
-    lvl1 db 'LEVEL 1$'
-    lvl2 db 'LEVEL 2$'
-    lvl3 db 'LEVEL 3$'
-    exitGame db 'EXIT GAME$'
-    blankText db '         $'
+    title db '--- TETRIS 86 ---', 0
+	lvl1 db 'LEVEL 1', 0
+    lvl2 db 'LEVEL 2', 0
+    lvl3 db 'LEVEL 3', 0
+    exitGame db 'EXIT GAME', 0
+    blankText db '         ', 0
 
-    hotkeys  db 'HOTKEYS$'
-    hotkeys1 db 'Left: ->$'
-    hotkeys2 db 'Right: <-$'
-    hotkeys3 db 'Down: v$'
-    hotkeys4 db 'Rotate Left: Q$'
-    hotkeys5 db 'Rotate Right: S$'
-    hotkeys6 db 'Exit Game: Esc$'
+    hotkeys  db 'HOTKEYS', 0
+    hotkeys1 db 'Left: ->', 0
+    hotkeys2 db 'Right: <-', 0
 
-    victory  db 'VICTORY$'
-    gameOver db 'GAME_OVER$'
+    hotkeys3 db 'Down: v', 0
+    hotkeys4 db 'Rotate Left: Q', 0
+    hotkeys5 db 'Rotate Right: W', 0
+    hotkeys6 db 'Exit Game: Esc', 0
 
-    scoreText db 'SCORE:$'
+    victory  db 'VICTORY', 0
+    gameOver db 'GAME OVER', 0
 
-    pressAnyKey db 'Press Any Key$'
+    scoreText db 'SCORE:', 0
+
+    pressAnyKey db 'Press Any Key', 0
 
     screenWidth dw 320
     sceenHeight dw 200
 
     nextPiece db 'NEXT PIECE$'
 
-    previewPieceSpawn dw 30236
+    previewPieceSpawn dw 30255
 
     previewPiece0 dw 0
     previewPiece1 dw 0
@@ -960,15 +1154,35 @@ section .data
     square1 dw 1
     square2 dw 320
     square3 dw 321
-    squareColor dq 0xb
+    squareColor dq 0x9
 
-    random6 db 0
+    bar0 dw 0
+    bar1 dw 320
+    bar2 dw 640
+    bar3 dw 960
+    barColor dq 0xE
+
+    zigzag0 dw 0
+    zigzag1 dw 1
+    zigzag2 dw 321
+    zigzag3 dw 322
+    zigzagColor dq 0xA
+
+    l0 dw 0
+    l1 dw 320
+    l2 dw 640
+    l3 dw 641
+    lColor dq 0xC
+
+    t0 dw 0
+    t1 dw 320
+    t2 dw 321
+    t3 dw 640
+    tColor dq 0xB
+
+    random5 db 0
 
     counter db 0
 
-    msg_score_buffer db "000$" ; holds the string representation of score
+    msg_score_buffer db "000",0 ; holds the string representation of score
     score dw 0 ; keeps score (representing total number of cleared lines)
-
-    
-
-     

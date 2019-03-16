@@ -1092,7 +1092,7 @@ section .data
     exitGame db 'EXIT GAME', 0
     blankText db '         ', 0
 
-    hotkeys  db 'HOTKEYS$', 0
+    hotkeys  db 'HOTKEYS', 0
     hotkeys1 db 'Left: ->', 0
     hotkeys2 db 'Right: <-', 0
     hotkeys3 db 'Down: v', 0
